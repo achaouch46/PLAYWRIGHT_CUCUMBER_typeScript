@@ -1,0 +1,25 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Playwright Cucumber",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/scripts/run-cucumber.js",
+      "args": [
+        "--TAGS=@AA",          // Change le tag ici ou lors du lancement
+        "--BROWSER=firefox",   // Change le navigateur ici
+        "--ENV=prod",          // Change l'environnement ici
+        "--DEBUG"              // Active le mode debug Playwright
+      ],
+      "runtimeExecutable": "node",  // Node détecté par NVM
+      "cwd": "${workspaceFolder}",
+      "env": {
+        "MAX_WORKERS": "4",    // Nombre maximal de workers
+        "PWDEBUG": "1"         // Mode debug Playwright
+      },
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ]
+}

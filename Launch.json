@@ -1,0 +1,23 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Debug Cucumber (Playwright)",
+      "type": "node",
+      "request": "launch",
+      "program": "${workspaceFolder}/node_modules/@cucumber/cucumber/bin/cucumber-js",
+      "args": [
+        "--require",
+        "tests/hooks.ts",
+        "--require",
+        "features/step-definitions/**/*.ts",
+        "--require-module",
+        "ts-node/register",
+        "features/**/*.feature"
+      ],
+      "cwd": "${workspaceFolder}",
+      "console": "integratedTerminal",
+      "internalConsoleOptions": "neverOpen"
+    }
+  ]
+}
