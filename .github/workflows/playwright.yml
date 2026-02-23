@@ -1,46 +1,27 @@
-name: Tests Playwright Cucumber
-
+name: Playwright Tests
 on:
   push:
-    branches: [ main, develop ]
+    branches: [ main, master ]
   pull_request:
-    branches: [ main ]
-
+    branches: [ main, master ]
 jobs:
   test:
-    timeout-minutes: 10
-    runs-on: ubuntu-22.04  # SOLUTION: Changer ubuntu-latest en ubuntu-22.04
-    
+    timeout-minutes: 60
+    runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
-    - name: Setup Node.js
-      uses: actions/setup-node@v3
+    - uses: actions/setup-node@v3
       with:
-        node-version: '18'
-    
+        node-version: 16
     - name: Install dependencies
       run: npm ci
-    
-    - name: Install Playwright
-      run: npx playwright install chromium --with-deps  # Maintenant ça marche avec ubuntu-22.04
-    
-    - name: Run tests
-      run: npm run test:ci
-      continue-on-error: true
-    
-    - name: Upload test reports
-      uses: actions/upload-artifact@v4
+    - name: Install Playwright Browsers
+      run: npx playwright install --with-deps
+    - name: Run Cucumber tests
+      run: npm test
+    - uses: actions/upload-artifact@v3
       if: always()
       with:
-        name: test-reports
-        path: |
-          test-results/
-          playwright-report/
-    
-    - name: Liste des rapports
-      if: always()
-      run: |
-        echo "📁 Rapports disponibles :"
-        ls -la test-results/ || echo "Pas de dossier test-results"
-        ls -la playwright-report/ || echo "Pas de dossier playwright-report"
+        name: Report
+        path: test-results
+        retention-days: 2
