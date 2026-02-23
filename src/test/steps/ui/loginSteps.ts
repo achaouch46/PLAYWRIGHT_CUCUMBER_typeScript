@@ -1,11 +1,11 @@
 import { Given, When, Then, setDefaultTimeout } from "@cucumber/cucumber";
 
 import { expect } from "@playwright/test";
-import { fixture } from "../../hooks/pageFixture";
-import HeaderPage from "../../pages/headerPage";
-import LoginPage from "../../pages/loginPage";
+import { fixture } from "../../../hooks/pageFixture";
+import HeaderPage from "../../../pages/headerPage";
+import LoginPage from "../../../pages/loginPage";
 
-import Assert from "../../helper/wrapper/assert";
+import Assert from "../../../helper/wrapper/assert";
 
 let headerPage: HeaderPage;
 let loginPage: LoginPage;

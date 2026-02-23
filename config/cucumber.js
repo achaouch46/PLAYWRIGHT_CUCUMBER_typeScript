@@ -5,12 +5,12 @@ module.exports = {
             snippetInterface: "async-await"
         },
         paths: [
-            "src/test/features/"
+            "src/test/**/*.feature"
         ],
         publishQuiet: true,
         dryRun: false,
         require: [
-            "src/test/steps/*.ts",
+            "src/test/steps/**/*.ts",
             "src/hooks/hooks.ts"
         ],
         requireModule: [
@@ -20,7 +20,6 @@ module.exports = {
             "progress-bar",
             "html:test-results/cucumber-report.html",
             "json:test-results/cucumber-report.json",
-            "rerun:@rerun.txt"
         ],
         parallel: 4
     },
@@ -31,7 +30,7 @@ module.exports = {
         publishQuiet: true,
         dryRun: false,
         require: [
-            "src/test/steps/*.ts",
+            "src/test/steps/**/*.ts",
             "src/hooks/hooks.ts"
         ],
         requireModule: [
@@ -41,7 +40,6 @@ module.exports = {
             "progress-bar",
             "html:test-results/cucumber-report.html",
             "json:test-results/cucumber-report.json",
-            "rerun:@rerun.txt"
         ],
         parallel: 2
     }
