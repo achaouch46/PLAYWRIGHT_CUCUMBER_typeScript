@@ -31,6 +31,8 @@ Before(async function() {
   }
 });
 
+
+
 When("I call the GET users API {int}", async function(userId: number) {
   try {
     const response = await sharedContext.apiContext.get(`/users/${userId}`);
@@ -39,15 +41,20 @@ When("I call the GET users API {int}", async function(userId: number) {
     
     if (response.ok()) {
       sharedContext.responseBody = await response.json();
+    } else {
+      // log pour debug CI
+      console.error(`❌ Response status: ${response.status()}`);
+      console.error(await response.text()); // voir la réponse complète
+      sharedContext.responseBody = {}; // éviter undefined
     }
   } catch (error) {
-    console.error('❌ Erreur requête:', error);
+    console.error('❌ Erreur requête API:', error);
     throw error;
   }
 });
 
 Then("the response should contain user", async function() {
-  expect(sharedContext.response.status()).toBe(200);
+  expect(sharedContext.response.status()).toBe(200); // passera si 200, sinon test échoue
   expect(sharedContext.responseBody.id).toBe(sharedContext.userId);
   expect(sharedContext.responseBody.email).toBeDefined();
 });
