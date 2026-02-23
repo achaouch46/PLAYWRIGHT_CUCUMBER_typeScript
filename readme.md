@@ -1,1 +1,2 @@
 MAX_WORKERS=4 npm run test:tnr -- --TAGS=@BB --BROWSER=firefox --ENV=prod
+npm run test
