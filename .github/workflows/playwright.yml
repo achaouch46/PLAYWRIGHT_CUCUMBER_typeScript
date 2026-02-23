@@ -7,65 +7,117 @@ on:
         description: 'Branch to test'
         required: true
         default: 'main'
+      tags:
+        description: 'Cucumber tags to run (e.g., @api or @smoke)'
+        required: false
+        default: '@api'
+      environment:
+        description: 'Test environment'
+        required: false
+        default: 'staging'
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        node-version: [18]  # Vous pouvez ajouter 16, 18, 20
+      fail-fast: false  # Continue les autres tests si un échoue
 
     steps:
-      - uses: actions/checkout@v3
+      - name: Checkout repository
+        uses: actions/checkout@v4  # Mise à jour vers v4
         with:
           ref: ${{ github.event.inputs.branch }}
+          fetch-depth: 0  # Récupère tout l'historique pour les rapports
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Setup Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4  # Mise à jour vers v4
         with:
-          node-version: 18
+          node-version: ${{ matrix.node-version }}
+          cache: 'npm'  # Cache les dépendances npm
 
-      - name: Install system dependencies for Playwright
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y \
-            libnss3 \
-            libatk-bridge2.0-0 \
-            libx11-xcb1 \
-            libxcomposite1 \
-            libxdamage1 \
-            libxrandr2 \
-            libgbm1 \
-            libasound2 \
-            libatk1.0-0 \
-            libcups2 \
-            libdrm2 \
-            libxss1 \
-            libffi-dev \
-            libx264-dev \
-            libwayland-client0 \
-            libwayland-cursor0 \
-            libwayland-egl1 \
-            libgl1 \
-            libpangocairo-1.0-0 \
-            libpango-1.0-0 \
-            libxkbcommon0 \
-            libxcb1 \
-            libx11-6 \
-            libxcb-dri3-0 \
-            libxcb-present0 \
-            libxcb-shm0 \
-            libxcb-xfixes0
+      - name: Cache Playwright browsers
+        id: playwright-cache
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: ${{ runner.os }}-playwright-${{ hashFiles('**/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-playwright-
 
       - name: Install dependencies
-        run: npm ci
+        run: npm ci  # Plus rapide et plus fiable que npm install
 
       - name: Install Playwright Browsers
-        run: npx playwright install --with-deps
+        run: |
+          npx playwright install chromium --with-deps  # Installe seulement chromium
+          # npx playwright install --with-deps  # Pour tous les navigateurs
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
 
-      - name: Run tests
-        run: npm run test
+      - name: Create test results directory
+        run: mkdir -p test-results  # Dossier pour les résultats
 
-      - name: Upload Playwright HTML Report
+      - name: Run Cucumber tests
+        run: |
+          npm run test -- \
+            --tags "${{ github.event.inputs.tags }}" \
+            --format json:test-results/cucumber-report.json \
+            --format html:test-results/cucumber-report.html \
+            --format summary
+        env:
+          NODE_ENV: test
+          TEST_ENV: ${{ github.event.inputs.environment }}
+          # Pour les problèmes SSL si nécessaire
+          NODE_TLS_REJECT_UNAUTHORIZED: 0
+          # Debug option
+          DEBUG: ${{ secrets.DEBUG_MODE }}
+
+      - name: Upload Cucumber JSON Report
+        if: always()  # Toujours uploader même si les tests échouent
+        uses: actions/upload-artifact@v4
+        with:
+          name: cucumber-json-report-${{ matrix.node-version }}
+          path: test-results/cucumber-report.json
+          retention-days: 30  # Garde le rapport 30 jours
+
+      - name: Upload Cucumber HTML Report
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: playwright-report
-          path: playwright-report
+          name: cucumber-html-report-${{ matrix.node-version }}
+          path: test-results/cucumber-report.html
+          retention-days: 30
+
+      - name: Upload Playwright Report (if exists)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ matrix.node-version }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 30
+
+      - name: Notify on failure
+        if: failure() && github.ref == 'refs/heads/main'
+        run: |
+          echo "Tests failed on main branch!"
+          # Ajoutez ici votre logique de notification (Slack, Email, etc.)
+
+  # Job séparé pour le déploiement des rapports (optionnel)
+  deploy-report:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          
+      - name: Deploy to GitHub Pages (optionnel)
+        run: |
+          echo "Déployer les rapports sur GitHub Pages"
+          # Ajoutez votre logique de déploiement ici
