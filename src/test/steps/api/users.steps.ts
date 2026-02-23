@@ -1,51 +1,46 @@
 // src/test/steps/api/users.steps.ts
-import { Before, Given, When, Then,After } from '@cucumber/cucumber';
+import { Before, Given, When, Then, After } from '@cucumber/cucumber';
 import { request, expect } from '@playwright/test';
 
-// Définir un type pour le contexte partagé
-interface SharedContext {
-  apiContext?: any;
-  response?: any;
-  responseBody?: any;
-  userId?: number;
-}
+// Correction: déclaration correcte de la constante
+const baseURL = 'https://fakestoreapi.com';
 
-const sharedContext: SharedContext = {};
-
+// Optionnel: créer l'apiContext avant les tests
 Before(async function() {
-  process.env.NODE_TLS_REJECT_UNAUTHORIZED = '0';
-  
-  try {
-    sharedContext.apiContext = await request.newContext({
-      baseURL: 'https://fakestoreapi.com',
-      ignoreHTTPSErrors: true,
-      timeout: 30000,
+  // Créer un contexte API si pas déjà fait
+  if (!this.apiContext) {
+    this.apiContext = await request.newContext({
+      baseURL: baseURL,
       extraHTTPHeaders: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 ' +
-                    '(KHTML, like Gecko) Chrome/112.0.0.0 Safari/537.36',
-      'Accept': 'application/json'
-    }
+        'Accept': 'application/json',
+      },
     });
-  } catch (error) {
-    throw error;
   }
 });
 
-
-
 When("I call the GET users API {int}", async function(userId: number) {
   try {
-    const response = await sharedContext.apiContext.get(`/users/${userId}`);
-    sharedContext.response = response;
-    sharedContext.userId = userId;
+    // Vérifier que apiContext existe
+    if (!this.apiContext) {
+      throw new Error('apiContext non initialisé. Vérifier le hook Before.');
+    }
+
+    const response = await this.apiContext.get(`/users/${userId}`);
+    
+    // Stocker dans this
+    this.response = response;
+    this.userId = userId;
     
     if (response.ok()) {
-      sharedContext.responseBody = await response.json();
+      this.responseBody = await response.json();
+      
+      // Debug log optionnel
+      console.log(`✅ API call successful for user ${userId}: ${response.status()}`);
     } else {
-      // log pour debug CI
       console.error(`❌ Response status: ${response.status()}`);
-      console.error(await response.text()); // voir la réponse complète
-      sharedContext.responseBody = {}; // éviter undefined
+      const errorText = await response.text();
+      console.error(`❌ Response body:`, errorText);
+      this.responseBody = {};
     }
   } catch (error) {
     console.error('❌ Erreur requête API:', error);
@@ -54,13 +49,24 @@ When("I call the GET users API {int}", async function(userId: number) {
 });
 
 Then("the response should contain user", async function() {
-  expect(sharedContext.response.status()).toBe(200); // passera si 200, sinon test échoue
-  expect(sharedContext.responseBody.id).toBe(sharedContext.userId);
-  expect(sharedContext.responseBody.email).toBeDefined();
+  // Vérifications avec messages d'erreur explicites
+  expect(this.response, "No response found - did you call the API first?").toBeDefined();
+  expect(this.responseBody, "No response body found - did you call the API first?").toBeDefined();
+  expect(this.userId, "No userId found - did you call the API first?").toBeDefined();
+  
+  // Log de debug pour voir ce qu'on reçoit
+  console.log('🔍 Response status:', this.response.status());
+  console.log('🔍 Response body:', this.responseBody);
+  
+  // Assertions
+  expect(this.response.status(), `Expected status 200 but got ${this.response.status()}`).toBe(200);
+  expect(this.responseBody.id, `Expected userId ${this.userId} but got ${this.responseBody?.id}`).toBe(this.userId);
+  expect(this.responseBody.email, "Email should be defined").toBeDefined();
 });
 
+// Nettoyage optionnel
 After(async function() {
-  if (sharedContext.apiContext) {
-    await sharedContext.apiContext.dispose();
-  }
+  this.response = null;
+  this.responseBody = null;
+  this.userId = null;
 });
