@@ -10,99 +10,81 @@ const fs = require("fs-extra");
 let browser: Browser;
 let context: BrowserContext;
 
-/* =======================
-   BEFORE ALL
-======================= */
 BeforeAll(async function () {
     getEnv();
     browser = await invokeBrowser();
 });
-
-/* =======================
-   BEFORE EACH SCENARIO
-======================= */
-Before(async function ({ pickle }) {
-    const scenarioName = `${pickle.name}_${pickle.id}`;
-
+// It will trigger for not auth scenarios
+Before({ tags: "not @auth" }, async function ({ pickle }) {
+    const scenarioName = pickle.name + pickle.id
     context = await browser.newContext({
         recordVideo: {
-            dir: "test-results/videos"
-        }
+            dir: "test-results/videos",
+        },
     });
-
     await context.tracing.start({
         name: scenarioName,
         title: pickle.name,
-        screenshots: true,
-        snapshots: true,
-        sources: true
+        sources: true,
+        screenshots: true, snapshots: true
     });
-
     const page = await context.newPage();
     fixture.page = page;
     fixture.logger = createLogger(options(scenarioName));
 });
 
-/* =======================
-   AFTER EACH SCENARIO
-   SOLUTION 2 (PRO)
-======================= */
+
+// It will trigger for auth scenarios
+Before({ tags: '@auth' }, async function ({ pickle }) {
+    const scenarioName = pickle.name + pickle.id
+    context = await browser.newContext({
+        
+        recordVideo: {
+            dir: "test-results/videos",
+        },
+    });
+    await context.tracing.start({
+        name: scenarioName,
+        title: pickle.name,
+        sources: true,
+        screenshots: true, snapshots: true
+    });
+    const page = await context.newPage();
+    fixture.page = page;
+    fixture.logger = createLogger(options(scenarioName));
+});
+
 After(async function ({ pickle, result }) {
-    const scenarioName = `${pickle.name}_${pickle.id}`;
-    const tracePath = `./test-results/trace/${pickle.id}.zip`;
-
-    let screenshot: Buffer;
-    let videoPath: string | undefined;
-
-    try {
-        // 📸 Screenshot TOUJOURS (PASSED + FAILED)
-        screenshot = await fixture.page.screenshot({
-            path: `./test-results/screenshots/${scenarioName}.png`,
-            type: "png"
-        });
-
-        // 🎥 Vidéo uniquement si FAILED
-        if (result?.status === Status.FAILED) {
-            videoPath = await fixture.page.video()?.path();
-        }
-
-        // 🧵 Trace uniquement si FAILED
-        if (result?.status === Status.FAILED) {
-            await context.tracing.stop({ path: tracePath });
-        } else {
-            await context.tracing.stop();
-        }
-
-    } finally {
-        // 🧹 Cleanup garanti
-        await fixture.page.close();
-        await context.close();
+    let videoPath: string;
+    let img: Buffer;
+    const path = `./test-results/trace/${pickle.id}.zip`;
+    if (result?.status == Status.FAILED) {
+        img = await fixture.page.screenshot(
+            { path: `./test-results/screenshots/${pickle.name}.png`, type: "png" })
+        videoPath = await fixture.page.video().path();
     }
-
-    // 📎 Screenshot → PASSED + FAILED
-    await this.attach(screenshot, "image/png");
-
-    // 📎 Vidéo → FAILED seulement
-    if (videoPath) {
+    await context.tracing.stop({ path: path });
+    await fixture.page.close();
+    await context.close();
+    if (result?.status == Status.FAILED) {
+        await this.attach(
+            img, "image/png"
+        );
         await this.attach(
             fs.readFileSync(videoPath),
-            "video/webm"
+            'video/webm'
         );
+        const traceFileLink = `<a href="https://trace.playwright.dev/">Open ${path}</a>`
+        await this.attach(`Trace file: ${traceFileLink}`, 'text/html');
+
     }
 
-    // 📎 Trace → FAILED seulement
-    if (result?.status === Status.FAILED) {
-        const traceLink = `
-            <a href="https://trace.playwright.dev/">
-                Open trace: ${tracePath}
-            </a>`;
-        await this.attach(traceLink, "text/html");
-    }
 });
 
-/* =======================
-   AFTER ALL
-======================= */
 AfterAll(async function () {
     await browser.close();
-});
+})
+
+
+
+
