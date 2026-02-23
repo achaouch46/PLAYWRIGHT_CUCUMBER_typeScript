@@ -2,7 +2,11 @@ name: Playwright Cucumber Tests
 
 # Déclenchement manuel avec paramètre
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - 'feature/*'  # si tu veux tester d'autres branches automatiquement
+  workflow_dispatch:   # Permet le bouton Run workflow
     inputs:
       branch:
         description: 'Nom de la branche à tester'
