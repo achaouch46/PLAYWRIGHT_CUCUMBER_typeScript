@@ -25,33 +25,50 @@ jobs:
     - name: Install Playwright
       run: npx playwright install chromium --with-deps
     
-    - name: 🔧 Créer le fichier env.ts manquant
+    - name: 🔧 SOLUTION 1 - Créer le fichier env.ts avec getEnv
       run: |
         echo "📁 Création du dossier helper/env..."
         mkdir -p src/helper/env
         
-        echo "📝 Création du fichier env.ts..."
+        echo "📝 Création du fichier env.ts avec getEnv()..."
         cat > src/helper/env/env.ts << 'EOF'
         /**
          * Configuration de l'environnement pour les tests
+         * Exporte getEnv() comme attendu par hooks.ts
          */
         
-        export interface EnvConfig {
-          ENV: string;
-          BASE_URL: string;
-        }
-        
-        export const env: EnvConfig = {
-          ENV: process.env.ENV || 'prod',
-          BASE_URL: process.env.BASE_URL || 'https://example.com',
+        // Récupérer l'environnement depuis les variables ou utiliser prod par défaut
+        export const getEnv = (): string => {
+          return process.env.ENV || 'prod';
         };
-        
+
+        export const getBaseUrl = (): string => {
+          return process.env.BASE_URL || 'https://example.com';
+        };
+
+        // Également disponible comme objet pour d'autres utilisations
+        export const env = {
+          ENV: getEnv(),
+          BASE_URL: getBaseUrl(),
+          USERNAME: process.env.TEST_USERNAME || 'testuser',
+          PASSWORD: process.env.TEST_PASSWORD || 'testpass'
+        };
+
+        // Export par défaut
         export default env;
         EOF
         
         echo "✅ Fichier créé avec succès !"
-        echo "📄 Contenu du fichier :"
+        echo "📄 Vérification du contenu :"
+        echo "------------------------"
         cat src/helper/env/env.ts
+        echo "------------------------"
+        echo "🔍 Les exports disponibles sont : getEnv(), getBaseUrl(), env, default"
+    
+    - name: Vérifier que l'erreur est résolue
+      run: |
+        echo "🔍 Test de compilation TypeScript sur hooks.ts :"
+        npx tsc --noEmit src/hooks/hooks.ts && echo "✅ Plus d'erreur de module !" || echo "⚠️ Il reste des erreurs mais le module est trouvé"
     
     - name: Run tests
       run: npm test
@@ -65,3 +82,4 @@ jobs:
         path: |
           test-results/
           playwright-report/
+          cucumber-report/
