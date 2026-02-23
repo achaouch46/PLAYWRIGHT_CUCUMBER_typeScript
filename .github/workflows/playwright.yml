@@ -26,7 +26,7 @@ jobs:
       run: npx playwright install chromium --with-deps  # Maintenant ça marche avec ubuntu-22.04
     
     - name: Run tests
-      run: npm test
+      run: npm test:ci
       continue-on-error: true
     
     - name: Upload test reports
